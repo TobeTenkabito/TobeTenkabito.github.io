@@ -1,0 +1,169 @@
+---
+import { playlist } from '@/data/music';
+---
+
+<section class="section music-section" aria-labelledby="music-heading" data-music-player>
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">正在听</p>
+      <h2 id="music-heading">播放列表</h2>
+    </div>
+  </div>
+
+  <div class="music-player">
+    <div class="music-now">
+      <p class="music-title" data-track-title>{playlist[0]?.title}</p>
+      <p class="music-artist" data-track-artist>{playlist[0]?.artist}</p>
+    </div>
+
+    <div class="music-controls" aria-label="音乐播放控制">
+      <button class="icon-button" type="button" aria-label="上一首" data-prev>‹</button>
+      <button class="icon-button play-button" type="button" aria-label="播放" data-play>
+        <span data-play-icon>▶</span>
+      </button>
+      <button class="icon-button" type="button" aria-label="下一首" data-next>›</button>
+    </div>
+
+    <div class="music-progress">
+      <span data-current-time>0:00</span>
+      <input data-seek type="range" min="0" max="100" value="0" aria-label="播放进度" />
+      <span data-duration>0:00</span>
+    </div>
+
+    <audio data-audio preload="metadata" src={playlist[0]?.src}></audio>
+
+    <ol class="track-list">
+      {
+        playlist.map((track, index) => (
+          <li>
+            <button
+              type="button"
+              class={index === 0 ? 'track-button is-active' : 'track-button'}
+              data-track-index={index}
+              data-src={track.src}
+              data-title={track.title}
+              data-artist={track.artist}
+            >
+              <span>{track.title}</span>
+              <small>{track.artist}</small>
+            </button>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<script>
+  const player = document.querySelector('[data-music-player]');
+
+  if (player) {
+    const audio = player.querySelector<HTMLAudioElement>('[data-audio]');
+    const playButton = player.querySelector<HTMLButtonElement>('[data-play]');
+    const playIcon = player.querySelector<HTMLElement>('[data-play-icon]');
+    const prevButton = player.querySelector<HTMLButtonElement>('[data-prev]');
+    const nextButton = player.querySelector<HTMLButtonElement>('[data-next]');
+    const title = player.querySelector<HTMLElement>('[data-track-title]');
+    const artist = player.querySelector<HTMLElement>('[data-track-artist]');
+    const seek = player.querySelector<HTMLInputElement>('[data-seek]');
+    const currentTime = player.querySelector<HTMLElement>('[data-current-time]');
+    const duration = player.querySelector<HTMLElement>('[data-duration]');
+    const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
+    let currentIndex = 0;
+
+    const formatTime = (seconds: number) => {
+      if (!Number.isFinite(seconds)) return '0:00';
+      const minutes = Math.floor(seconds / 60);
+      const rest = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${minutes}:${rest}`;
+    };
+
+    const setActiveTrack = (index: number, shouldPlay = false) => {
+      const track = trackButtons[index];
+      if (!track || !(audio instanceof HTMLAudioElement)) return;
+
+      currentIndex = index;
+      audio.src = track.dataset.src || '';
+      if (title) title.textContent = track.dataset.title || '';
+      if (artist) artist.textContent = track.dataset.artist || '';
+
+      for (const button of trackButtons) {
+        button.classList.toggle('is-active', button === track);
+      }
+
+      if (seek instanceof HTMLInputElement) seek.value = '0';
+      if (currentTime) currentTime.textContent = '0:00';
+      if (duration) duration.textContent = '0:00';
+
+      if (shouldPlay) {
+        audio.play();
+      }
+    };
+
+    const playCurrent = () => {
+      if (audio instanceof HTMLAudioElement) audio.play();
+    };
+
+    const pauseCurrent = () => {
+      if (audio instanceof HTMLAudioElement) audio.pause();
+    };
+
+    playButton?.addEventListener('click', () => {
+      if (!(audio instanceof HTMLAudioElement)) return;
+      if (audio.paused) {
+        playCurrent();
+      } else {
+        pauseCurrent();
+      }
+    });
+
+    prevButton?.addEventListener('click', () => {
+      const nextIndex = (currentIndex - 1 + trackButtons.length) % trackButtons.length;
+      setActiveTrack(nextIndex, true);
+    });
+
+    nextButton?.addEventListener('click', () => {
+      const nextIndex = (currentIndex + 1) % trackButtons.length;
+      setActiveTrack(nextIndex, true);
+    });
+
+    for (const button of trackButtons) {
+      button.addEventListener('click', () => {
+        const index = Number(button.dataset.trackIndex);
+        setActiveTrack(index, true);
+      });
+    }
+
+    audio?.addEventListener('play', () => {
+      if (playIcon) playIcon.textContent = '||';
+      playButton?.setAttribute('aria-label', '暂停');
+    });
+
+    audio?.addEventListener('pause', () => {
+      if (playIcon) playIcon.textContent = '▶';
+      playButton?.setAttribute('aria-label', '播放');
+    });
+
+    audio?.addEventListener('loadedmetadata', () => {
+      if (!(audio instanceof HTMLAudioElement)) return;
+      if (duration) duration.textContent = formatTime(audio.duration);
+    });
+
+    audio?.addEventListener('timeupdate', () => {
+      if (!(audio instanceof HTMLAudioElement) || !(seek instanceof HTMLInputElement)) return;
+      const progress = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+      seek.value = String(progress);
+      if (currentTime) currentTime.textContent = formatTime(audio.currentTime);
+    });
+
+    audio?.addEventListener('ended', () => {
+      const nextIndex = (currentIndex + 1) % trackButtons.length;
+      setActiveTrack(nextIndex, trackButtons.length > 1);
+    });
+
+    seek?.addEventListener('input', () => {
+      if (!(audio instanceof HTMLAudioElement) || !(seek instanceof HTMLInputElement) || !audio.duration) return;
+      audio.currentTime = (Number(seek.value) / 100) * audio.duration;
+    });
+  }
+</script>

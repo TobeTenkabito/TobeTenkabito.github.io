@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import MusicPlayer from '@/components/MusicPlayer.astro';
 import { site } from '@/data/site';
 import { categoryHref, postHref } from '@/lib/posts';
 
@@ -47,6 +48,8 @@ const now = [
     </picture>
     <figcaption>书桌一角，留给那些还没整理完的想法。</figcaption>
   </figure>
+
+  <MusicPlayer />
 
   <section class="section">
     <div class="section-heading">
