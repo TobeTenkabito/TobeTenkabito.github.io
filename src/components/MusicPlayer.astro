@@ -4,13 +4,9 @@ import { playlist } from '@/data/music';
 
 <div class="floating-music" data-music-player data-collapsed="false">
   <button class="music-bubble" type="button" aria-label="展开音乐播放器" data-toggle data-drag-handle>
-    <span class="beat-ring" aria-hidden="true">
-      {
-        Array.from({ length: 16 }).map((_, index) => (
-          <span class="beat-bar" style={`--angle: ${index * 22.5}deg`}></span>
-        ))
-      }
-    </span>
+    <svg class="beat-wave" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <polyline data-beat-wave points="8,36 16,36 21,36 25,36 30,36 34,36 39,36 44,36 49,36 56,36"></polyline>
+    </svg>
     <span aria-hidden="true">♪</span>
   </button>
 
@@ -108,8 +104,10 @@ import { playlist } from '@/data/music';
     const duration = player.querySelector<HTMLElement>('[data-duration]');
     const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
     const dragHandles = [...player.querySelectorAll<HTMLElement>('[data-drag-handle]')];
-    const beatBars = [...player.querySelectorAll<HTMLElement>('.beat-bar')];
+    const beatWave = player.querySelector<SVGPolylineElement>('[data-beat-wave]');
     const idleDelay = 9000;
+    const waveXs = [8, 15, 20, 24, 29, 33, 38, 43, 49, 56];
+    const waveDirections = [0, 0.35, -0.85, 0.9, -0.42, 0.32, -0.95, 0.72, -0.28, 0];
     let currentIndex = 0;
     let idleTimer = 0;
     let audioContext: AudioContext | null = null;
@@ -147,9 +145,7 @@ import { playlist } from '@/data/music';
       window.cancelAnimationFrame(beatFrame);
       beatFrame = 0;
       smoothedEnergy = 0;
-      for (const bar of beatBars) {
-        bar.style.setProperty('--level', '0');
-      }
+      beatWave?.setAttribute('points', waveXs.map((x) => `${x},36`).join(' '));
     };
 
     const renderBeatMeter = () => {
@@ -167,15 +163,17 @@ import { playlist } from '@/data/music';
       const energy = bass * 0.68 + lowMid * 0.22 + highMid * 0.1;
       smoothedEnergy = smoothedEnergy * 0.62 + energy * 0.38;
 
-      beatBars.forEach((bar, index) => {
-        const bandStart = 2 + Math.floor((index / beatBars.length) * 58);
+      const points = waveXs.map((x, index) => {
+        const bandStart = 2 + Math.floor((index / waveXs.length) * 58);
         const bandEnd = bandStart + 5;
         const localBand = averageRange(data, bandStart, bandEnd);
-        const anchor = index < 5 || index > 12 ? bass : index < 10 ? lowMid : highMid;
+        const anchor = index < 3 || index > 7 ? bass : index < 6 ? lowMid : highMid;
         const level = clamp(localBand * 0.58 + anchor * 0.32 + smoothedEnergy * 0.28, 0, 1);
-        bar.style.setProperty('--level', level.toFixed(3));
+        const y = 36 - waveDirections[index] * (4 + level * 18);
+        return `${x},${y.toFixed(1)}`;
       });
 
+      beatWave?.setAttribute('points', points.join(' '));
       beatFrame = window.requestAnimationFrame(renderBeatMeter);
     };
 

@@ -272,37 +272,30 @@ main {
   line-height: 1;
 }
 
-.music-bubble > span:not(.beat-ring) {
+.music-bubble > span:not(.beat-wave) {
   position: relative;
   z-index: 1;
 }
 
-.beat-ring {
+.beat-wave {
   position: absolute;
-  inset: -0.82rem;
-  border-radius: 999px;
+  inset: 0.42rem;
+  z-index: 0;
+  overflow: visible;
   pointer-events: none;
 }
 
-.beat-bar {
-  --angle: 0deg;
-  --level: 0;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0.18rem;
-  height: calc(0.42rem + var(--level) * 1.05rem);
-  margin-left: -0.09rem;
-  margin-top: calc((0.42rem + var(--level) * 1.05rem) / -2);
-  border-radius: 999px;
-  background: rgba(47, 111, 103, calc(0.28 + var(--level) * 0.52));
-  transform: rotate(var(--angle)) translateY(calc(-2.24rem - var(--level) * 0.16rem));
-  transform-origin: center;
-  transition:
-    background 70ms linear,
-    height 70ms linear,
-    margin-top 70ms linear,
-    transform 70ms linear;
+.beat-wave polyline {
+  fill: none;
+  stroke: rgba(255, 253, 248, 0.68);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.2;
+  transition: points 70ms linear;
+}
+
+.floating-music.is-playing .beat-wave polyline {
+  stroke: rgba(255, 253, 248, 0.9);
 }
 
 .floating-music[data-collapsed="true"] {
