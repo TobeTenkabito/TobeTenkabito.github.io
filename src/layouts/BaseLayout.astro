@@ -1,4 +1,5 @@
 ---
+import MusicPlayer from '@/components/MusicPlayer.astro';
 import { site } from '@/data/site';
 import '@/styles/global.css';
 
@@ -51,5 +52,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
     <footer class="site-footer">
       <p>© {new Date().getFullYear()} {site.author}. 慢慢写，慢慢整理。</p>
     </footer>
+    <MusicPlayer />
   </body>
 </html>
