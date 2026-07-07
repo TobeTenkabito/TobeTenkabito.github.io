@@ -1,0 +1,28 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { site } from '@/data/site';
+---
+
+<BaseLayout title="关于" description={`关于 ${site.author}。`}>
+  <section class="page-heading">
+    <p class="eyebrow">About</p>
+    <h1>你好，我是 {site.author}</h1>
+    <p>这里是我的长期写作空间，用来沉淀技术、项目和生活里的判断。</p>
+  </section>
+
+  <section class="section split">
+    <div>
+      <h2>我会写什么</h2>
+    </div>
+    <div class="feature-list">
+      <p>把学到的技术整理成可以复用的笔记。</p>
+      <p>记录项目过程中的取舍、错误和下一次会更好的地方。</p>
+      <p>保留一些生活里的观察，让日常经验也有地方安放。</p>
+    </div>
+  </section>
+
+  <section class="section contact-band">
+    <h2>保持连接</h2>
+    <p>你可以把这里当作我的公开工作台。之后可以在这个页面补上邮箱、GitHub、社交账号或项目链接。</p>
+  </section>
+</BaseLayout>

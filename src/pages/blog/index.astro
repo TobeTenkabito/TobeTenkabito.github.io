@@ -1,0 +1,40 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { postHref } from '@/lib/posts';
+
+const posts = (await getCollection('blog'))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime());
+---
+
+<BaseLayout title="文章" description="TobeTenkabito 的文章归档。">
+  <section class="page-heading">
+    <p class="eyebrow">Archive</p>
+    <h1>文章</h1>
+    <p>持续整理学习、项目与生活中的想法。</p>
+  </section>
+
+  <section class="post-list" aria-label="文章列表">
+    {
+      posts.map((post) => (
+        <article class="post-row">
+          <div>
+            <p class="post-date">
+              {post.data.publishDate.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+            <h2><a href={postHref(post)}>{post.data.title}</a></h2>
+            <p>{post.data.description}</p>
+          </div>
+          <ul class="tag-list">
+            {post.data.tags.map((tag) => <li>{tag}</li>)}
+          </ul>
+        </article>
+      ))
+    }
+  </section>
+</BaseLayout>
