@@ -5,6 +5,7 @@ import { playlist } from '@/data/music';
 <div class="floating-music" data-music-player data-collapsed="false">
   <button class="music-bubble" type="button" aria-label="展开音乐播放器" data-toggle data-drag-handle>
     <svg class="beat-wave" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+      <circle class="beat-base" cx="50" cy="50" r="38"></circle>
       <polyline data-beat-wave points=""></polyline>
     </svg>
     <span aria-hidden="true">♪</span>
@@ -108,7 +109,7 @@ import { playlist } from '@/data/music';
     const idleDelay = 9000;
     const wavePointCount = 64;
     const waveBaseRadius = 38;
-    const waveSpikePattern = [0.22, 0.48, 0.12, 0.78, 0.18, 0.36, 0.08, 0.58];
+    const waveSpikePattern = [0.12, 0.36, 0.08, 0.62, 0.14, 0.28, 0.06, 0.44];
     let currentIndex = 0;
     let idleTimer = 0;
     let audioContext: AudioContext | null = null;
@@ -142,7 +143,7 @@ import { playlist } from '@/data/music';
       return total / ((last - first) * 255);
     };
 
-    const circularWavePoints = (data?: Uint8Array<ArrayBuffer>) => {
+    const circularWavePoints = (data?: Uint8Array<ArrayBuffer>, activeEnergy = 0) => {
       const points: string[] = [];
 
       for (let index = 0; index <= wavePointCount; index += 1) {
@@ -152,8 +153,8 @@ import { playlist } from '@/data/music';
         const bandStart = 2 + Math.floor((foldedIndex / wavePointCount) * 62);
         const band = data ? averageRange(data, bandStart, bandStart + 4) : 0;
         const spike = waveSpikePattern[foldedIndex % waveSpikePattern.length];
-        const pulse = smoothedEnergy * 0.4 + band * 0.75;
-        const radius = waveBaseRadius + pulse * (4 + spike * 13);
+        const pulse = activeEnergy > 0.018 ? smoothedEnergy * 0.34 + band * 0.72 : 0;
+        const radius = waveBaseRadius + pulse * (2.6 + spike * 9.5);
         const x = 50 + Math.cos(angle) * radius;
         const y = 50 + Math.sin(angle) * radius;
 
@@ -185,7 +186,7 @@ import { playlist } from '@/data/music';
       const energy = bass * 0.68 + lowMid * 0.22 + highMid * 0.1;
       smoothedEnergy = smoothedEnergy * 0.62 + energy * 0.38;
 
-      beatWave?.setAttribute('points', circularWavePoints(data));
+      beatWave?.setAttribute('points', circularWavePoints(data, energy));
       beatFrame = window.requestAnimationFrame(renderBeatMeter);
     };
 
