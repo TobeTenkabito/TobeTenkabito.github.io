@@ -279,60 +279,30 @@ main {
 
 .beat-ring {
   position: absolute;
-  inset: -0.62rem;
+  inset: -0.82rem;
   border-radius: 999px;
   pointer-events: none;
 }
 
-.beat-dot {
+.beat-bar {
   --angle: 0deg;
-  --beat: 0;
+  --level: 0;
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 0.34rem;
-  height: 0.34rem;
-  margin: -0.17rem;
+  width: 0.18rem;
+  height: calc(0.42rem + var(--level) * 1.05rem);
+  margin-left: -0.09rem;
+  margin-top: calc((0.42rem + var(--level) * 1.05rem) / -2);
   border-radius: 999px;
-  background: rgba(47, 111, 103, 0.28);
-  opacity: calc(0.34 + var(--beat) * 0.58);
-  transform: rotate(var(--angle)) translate(calc(2.08rem + var(--beat) * 0.36rem))
-    scale(calc(0.76 + var(--beat) * 1.15));
+  background: rgba(47, 111, 103, calc(0.28 + var(--level) * 0.52));
+  transform: rotate(var(--angle)) translateY(calc(-2.24rem - var(--level) * 0.16rem));
+  transform-origin: center;
   transition:
-    opacity 80ms linear,
-    transform 80ms linear;
-}
-
-.beat-dot-1 {
-  --angle: 0deg;
-}
-
-.beat-dot-2 {
-  --angle: 45deg;
-}
-
-.beat-dot-3 {
-  --angle: 90deg;
-}
-
-.beat-dot-4 {
-  --angle: 135deg;
-}
-
-.beat-dot-5 {
-  --angle: 180deg;
-}
-
-.beat-dot-6 {
-  --angle: 225deg;
-}
-
-.beat-dot-7 {
-  --angle: 270deg;
-}
-
-.beat-dot-8 {
-  --angle: 315deg;
+    background 70ms linear,
+    height 70ms linear,
+    margin-top 70ms linear,
+    transform 70ms linear;
 }
 
 .floating-music[data-collapsed="true"] {

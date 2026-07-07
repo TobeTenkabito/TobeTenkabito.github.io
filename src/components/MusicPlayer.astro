@@ -5,14 +5,11 @@ import { playlist } from '@/data/music';
 <div class="floating-music" data-music-player data-collapsed="false">
   <button class="music-bubble" type="button" aria-label="展开音乐播放器" data-toggle data-drag-handle>
     <span class="beat-ring" aria-hidden="true">
-      <span class="beat-dot beat-dot-1"></span>
-      <span class="beat-dot beat-dot-2"></span>
-      <span class="beat-dot beat-dot-3"></span>
-      <span class="beat-dot beat-dot-4"></span>
-      <span class="beat-dot beat-dot-5"></span>
-      <span class="beat-dot beat-dot-6"></span>
-      <span class="beat-dot beat-dot-7"></span>
-      <span class="beat-dot beat-dot-8"></span>
+      {
+        Array.from({ length: 16 }).map((_, index) => (
+          <span class="beat-bar" style={`--angle: ${index * 22.5}deg`}></span>
+        ))
+      }
     </span>
     <span aria-hidden="true">♪</span>
   </button>
@@ -111,7 +108,7 @@ import { playlist } from '@/data/music';
     const duration = player.querySelector<HTMLElement>('[data-duration]');
     const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
     const dragHandles = [...player.querySelectorAll<HTMLElement>('[data-drag-handle]')];
-    const beatDots = [...player.querySelectorAll<HTMLElement>('.beat-dot')];
+    const beatBars = [...player.querySelectorAll<HTMLElement>('.beat-bar')];
     const idleDelay = 9000;
     let currentIndex = 0;
     let idleTimer = 0;
@@ -150,8 +147,8 @@ import { playlist } from '@/data/music';
       window.cancelAnimationFrame(beatFrame);
       beatFrame = 0;
       smoothedEnergy = 0;
-      for (const dot of beatDots) {
-        dot.style.setProperty('--beat', '0');
+      for (const bar of beatBars) {
+        bar.style.setProperty('--level', '0');
       }
     };
 
@@ -161,19 +158,22 @@ import { playlist } from '@/data/music';
         return;
       }
 
-      analyser.getByteFrequencyData(frequencyData);
+      const data = frequencyData;
+      analyser.getByteFrequencyData(data);
 
-      const bass = averageRange(frequencyData, 1, 8);
-      const lowMid = averageRange(frequencyData, 8, 20);
-      const highMid = averageRange(frequencyData, 20, 48);
+      const bass = averageRange(data, 1, 8);
+      const lowMid = averageRange(data, 8, 20);
+      const highMid = averageRange(data, 20, 48);
       const energy = bass * 0.68 + lowMid * 0.22 + highMid * 0.1;
       smoothedEnergy = smoothedEnergy * 0.62 + energy * 0.38;
 
-      beatDots.forEach((dot, index) => {
-        const band = index % 3 === 0 ? bass : index % 3 === 1 ? lowMid : highMid;
-        const accent = index % 2 === 0 ? smoothedEnergy : energy;
-        const beat = clamp(band * 0.72 + accent * 0.5, 0, 1);
-        dot.style.setProperty('--beat', beat.toFixed(3));
+      beatBars.forEach((bar, index) => {
+        const bandStart = 2 + Math.floor((index / beatBars.length) * 58);
+        const bandEnd = bandStart + 5;
+        const localBand = averageRange(data, bandStart, bandEnd);
+        const anchor = index < 5 || index > 12 ? bass : index < 10 ? lowMid : highMid;
+        const level = clamp(localBand * 0.58 + anchor * 0.32 + smoothedEnergy * 0.28, 0, 1);
+        bar.style.setProperty('--level', level.toFixed(3));
       });
 
       beatFrame = window.requestAnimationFrame(renderBeatMeter);
