@@ -270,6 +270,7 @@ main {
   font-size: 1.5rem;
   font-weight: 800;
   line-height: 1;
+  overflow: visible;
 }
 
 .music-bubble > span:not(.beat-wave) {
@@ -279,7 +280,7 @@ main {
 
 .beat-wave {
   position: absolute;
-  inset: 0.42rem;
+  inset: -0.85rem;
   z-index: 0;
   overflow: visible;
   pointer-events: none;
@@ -287,15 +288,15 @@ main {
 
 .beat-wave polyline {
   fill: none;
-  stroke: rgba(255, 253, 248, 0.68);
+  stroke: rgba(246, 177, 197, 0.72);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 3.2;
+  stroke-width: 2.6;
   transition: points 70ms linear;
 }
 
 .floating-music.is-playing .beat-wave polyline {
-  stroke: rgba(255, 253, 248, 0.9);
+  stroke: rgba(246, 177, 197, 0.96);
 }
 
 .floating-music[data-collapsed="true"] {
