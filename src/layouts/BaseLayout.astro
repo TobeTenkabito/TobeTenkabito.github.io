@@ -1,6 +1,7 @@
 ---
 import MusicPlayer from '@/components/MusicPlayer.astro';
 import { site } from '@/data/site';
+import { ClientRouter } from 'astro:transitions';
 import '@/styles/global.css';
 
 interface Props {
@@ -22,6 +23,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{pageTitle}</title>
+    <ClientRouter />
   </head>
   <body>
     <a class="skip-link" href="#main">跳到正文</a>

@@ -2,7 +2,7 @@
 import { playlist } from '@/data/music';
 ---
 
-<div class="floating-music" data-music-player data-collapsed="false">
+<div class="floating-music" data-music-player data-collapsed="false" transition:persist="music-player">
   <button class="music-bubble" type="button" aria-label="展开音乐播放器" data-toggle data-drag-handle>
     <svg class="beat-wave" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
       <circle class="beat-base" cx="50" cy="50" r="38"></circle>
@@ -85,7 +85,9 @@ import { playlist } from '@/data/music';
 <script>
   const player = document.querySelector<HTMLElement>('[data-music-player]');
 
-  if (player) {
+  if (player && player.dataset.initialized !== 'true') {
+    player.dataset.initialized = 'true';
+
     const audio = player.querySelector<HTMLAudioElement>('[data-audio]');
     const playButton = player.querySelector<HTMLButtonElement>('[data-play]');
     const playIcon = player.querySelector<HTMLElement>('[data-play-icon]');
