@@ -2,6 +2,7 @@
 title: '开始'
 description: '这是本项目生命的开始。'
 publishDate: 2026-05-22
+category: '建站日志'
 tags: ['Project', 'Review']
 ---
 

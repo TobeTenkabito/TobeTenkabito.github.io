@@ -2,6 +2,7 @@
 title: '用 Astro 开始新的个人博客'
 description: '记录这个博客从零搭建的第一步，以及为什么选择静态站点。'
 publishDate: 2026-07-07
+category: '建站日志'
 tags: ['Astro', 'Blog', 'GitHub Pages']
 ---
 

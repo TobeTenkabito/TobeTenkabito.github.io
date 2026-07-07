@@ -1,0 +1,49 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getCategorySummaries, postHref, sortPosts } from '@/lib/posts';
+
+export async function getStaticPaths() {
+  const posts = sortPosts((await getCollection('blog')).filter((post) => !post.data.draft));
+  const categories = getCategorySummaries(posts);
+
+  return categories.map((category) => ({
+    params: { category: category.slug },
+    props: { category },
+  }));
+}
+
+const { category } = Astro.props;
+---
+
+<BaseLayout title={category.name} description={`分类「${category.name}」下的文章。`}>
+  <section class="page-heading">
+    <a class="text-link" href="/categories/">← 返回分类</a>
+    <p class="eyebrow">Category</p>
+    <h1>{category.name}</h1>
+    <p>这个分类下共有 {category.count} 篇文章。</p>
+  </section>
+
+  <section class="post-list" aria-label={`${category.name} 分类文章列表`}>
+    {
+      category.posts.map((post) => (
+        <article class="post-row">
+          <div>
+            <p class="post-date">
+              {post.data.publishDate.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+            <h2><a href={postHref(post)}>{post.data.title}</a></h2>
+            <p>{post.data.description}</p>
+          </div>
+          <ul class="tag-list">
+            {post.data.tags.map((tag) => <li>{tag}</li>)}
+          </ul>
+        </article>
+      ))
+    }
+  </section>
+</BaseLayout>

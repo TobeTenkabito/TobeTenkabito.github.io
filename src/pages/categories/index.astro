@@ -1,0 +1,38 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { categoryHref, getCategorySummaries, sortPosts } from '@/lib/posts';
+
+const posts = sortPosts((await getCollection('blog')).filter((post) => !post.data.draft));
+const categories = getCategorySummaries(posts);
+---
+
+<BaseLayout title="分类" description="按主题浏览 TobeTenkabito 的文章。">
+  <section class="page-heading">
+    <p class="eyebrow">Categories</p>
+    <h1>分类</h1>
+    <p>比标签更粗一点的整理方式，用来把相近的文章放在同一个抽屉里。</p>
+  </section>
+
+  <section class="category-list" aria-label="文章分类">
+    {
+      categories.map((category) => (
+        <article class="category-row">
+          <div>
+            <p class="post-date">{category.count} 篇文章</p>
+            <h2><a href={categoryHref(category.name)}>{category.name}</a></h2>
+            <p>
+              最近更新：
+              {category.latestDate?.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+          </div>
+          <a class="text-link" href={categoryHref(category.name)}>浏览</a>
+        </article>
+      ))
+    }
+  </section>
+</BaseLayout>

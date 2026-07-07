@@ -2,6 +2,7 @@
 title: '把学习记录写成可回访的地图'
 description: '学习笔记不只是摘抄，也可以成为未来自己的导航。'
 publishDate: 2026-06-15
+category: '学习笔记'
 tags: ['Learning', 'Notes']
 ---
 
