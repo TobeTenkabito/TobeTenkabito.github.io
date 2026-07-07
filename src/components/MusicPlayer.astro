@@ -2,15 +2,20 @@
 import { playlist } from '@/data/music';
 ---
 
-<section class="section music-section" aria-labelledby="music-heading" data-music-player>
-  <div class="section-heading">
-    <div>
-      <p class="eyebrow">正在听</p>
-      <h2 id="music-heading">播放列表</h2>
-    </div>
-  </div>
+<div class="floating-music" data-music-player data-collapsed="false">
+  <button class="music-bubble" type="button" aria-label="展开音乐播放器" data-toggle data-drag-handle>
+    <span aria-hidden="true">♪</span>
+  </button>
 
-  <div class="music-player">
+  <section class="music-panel" aria-labelledby="music-heading">
+    <header class="music-panel-header" data-drag-handle>
+      <div>
+        <p class="eyebrow">正在听</p>
+        <h2 id="music-heading">播放列表</h2>
+      </div>
+      <button class="icon-button" type="button" aria-label="收起播放器" data-collapse>×</button>
+    </header>
+
     <div class="music-now">
       <p class="music-title" data-track-title>{playlist[0]?.title}</p>
       <p class="music-artist" data-track-artist>{playlist[0]?.artist}</p>
@@ -51,11 +56,11 @@ import { playlist } from '@/data/music';
         ))
       }
     </ol>
-  </div>
-</section>
+  </section>
+</div>
 
 <script>
-  const player = document.querySelector('[data-music-player]');
+  const player = document.querySelector<HTMLElement>('[data-music-player]');
 
   if (player) {
     const audio = player.querySelector<HTMLAudioElement>('[data-audio]');
@@ -63,13 +68,78 @@ import { playlist } from '@/data/music';
     const playIcon = player.querySelector<HTMLElement>('[data-play-icon]');
     const prevButton = player.querySelector<HTMLButtonElement>('[data-prev]');
     const nextButton = player.querySelector<HTMLButtonElement>('[data-next]');
+    const toggleButton = player.querySelector<HTMLButtonElement>('[data-toggle]');
+    const collapseButton = player.querySelector<HTMLButtonElement>('[data-collapse]');
     const title = player.querySelector<HTMLElement>('[data-track-title]');
     const artist = player.querySelector<HTMLElement>('[data-track-artist]');
     const seek = player.querySelector<HTMLInputElement>('[data-seek]');
     const currentTime = player.querySelector<HTMLElement>('[data-current-time]');
     const duration = player.querySelector<HTMLElement>('[data-duration]');
     const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
+    const dragHandles = [...player.querySelectorAll<HTMLElement>('[data-drag-handle]')];
+    const idleDelay = 9000;
     let currentIndex = 0;
+    let idleTimer = 0;
+    let dragState:
+      | {
+          pointerId: number;
+          offsetX: number;
+          offsetY: number;
+          startX: number;
+          startY: number;
+          moved: boolean;
+        }
+      | null = null;
+
+    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+    const placePlayer = (left: number, top: number) => {
+      const rect = player.getBoundingClientRect();
+      const nextLeft = clamp(left, 12, window.innerWidth - rect.width - 12);
+      const nextTop = clamp(top, 12, window.innerHeight - rect.height - 12);
+      player.style.left = `${nextLeft}px`;
+      player.style.top = `${nextTop}px`;
+      player.style.right = 'auto';
+      player.style.bottom = 'auto';
+      localStorage.setItem('music-player-position', JSON.stringify({ left: nextLeft, top: nextTop }));
+    };
+
+    const restorePosition = () => {
+      const savedPosition = localStorage.getItem('music-player-position');
+
+      if (savedPosition) {
+        try {
+          const { left, top } = JSON.parse(savedPosition) as { left: number; top: number };
+          requestAnimationFrame(() => placePlayer(left, top));
+          return;
+        } catch {
+          localStorage.removeItem('music-player-position');
+        }
+      }
+
+      requestAnimationFrame(() => {
+        const rect = player.getBoundingClientRect();
+        placePlayer(window.innerWidth - rect.width - 24, window.innerHeight - rect.height - 24);
+      });
+    };
+
+    const setCollapsed = (collapsed: boolean) => {
+      player.dataset.collapsed = String(collapsed);
+      toggleButton?.setAttribute('aria-expanded', String(!collapsed));
+      requestAnimationFrame(() => {
+        const rect = player.getBoundingClientRect();
+        placePlayer(
+          clamp(rect.left, 12, window.innerWidth - rect.width - 12),
+          clamp(rect.top, 12, window.innerHeight - rect.height - 12),
+        );
+      });
+    };
+
+    const resetIdleTimer = () => {
+      window.clearTimeout(idleTimer);
+      if (player.dataset.collapsed === 'true') return;
+      idleTimer = window.setTimeout(() => setCollapsed(true), idleDelay);
+    };
 
     const formatTime = (seconds: number) => {
       if (!Number.isFinite(seconds)) return '0:00';
@@ -98,15 +168,26 @@ import { playlist } from '@/data/music';
       if (shouldPlay) {
         audio.play();
       }
+      resetIdleTimer();
     };
 
     const playCurrent = () => {
       if (audio instanceof HTMLAudioElement) audio.play();
+      resetIdleTimer();
     };
 
     const pauseCurrent = () => {
       if (audio instanceof HTMLAudioElement) audio.pause();
+      resetIdleTimer();
     };
+
+    toggleButton?.addEventListener('click', () => {
+      if (dragState?.moved) return;
+      setCollapsed(player.dataset.collapsed !== 'true');
+      resetIdleTimer();
+    });
+
+    collapseButton?.addEventListener('click', () => setCollapsed(true));
 
     playButton?.addEventListener('click', () => {
       if (!(audio instanceof HTMLAudioElement)) return;
@@ -134,12 +215,60 @@ import { playlist } from '@/data/music';
       });
     }
 
+    for (const handle of dragHandles) {
+      handle.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        const target = event.target as HTMLElement;
+        if (target.closest('button') && !target.closest('[data-toggle]')) return;
+
+        const rect = player.getBoundingClientRect();
+        dragState = {
+          pointerId: event.pointerId,
+          offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top,
+          startX: event.clientX,
+          startY: event.clientY,
+          moved: false,
+        };
+        handle.setPointerCapture(event.pointerId);
+        player.classList.add('is-dragging');
+        resetIdleTimer();
+      });
+
+      handle.addEventListener('pointermove', (event) => {
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+        dragState.moved = dragState.moved || distance > 4;
+        placePlayer(event.clientX - dragState.offsetX, event.clientY - dragState.offsetY);
+      });
+
+      handle.addEventListener('pointerup', (event) => {
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        handle.releasePointerCapture(event.pointerId);
+        window.setTimeout(() => {
+          dragState = null;
+        });
+        player.classList.remove('is-dragging');
+        resetIdleTimer();
+      });
+    }
+
+    player.addEventListener('pointerdown', resetIdleTimer);
+    player.addEventListener('pointermove', resetIdleTimer);
+    player.addEventListener('keydown', resetIdleTimer);
+    window.addEventListener('resize', () => {
+      const rect = player.getBoundingClientRect();
+      placePlayer(rect.left, rect.top);
+    });
+
     audio?.addEventListener('play', () => {
+      player.classList.add('is-playing');
       if (playIcon) playIcon.textContent = '||';
       playButton?.setAttribute('aria-label', '暂停');
     });
 
     audio?.addEventListener('pause', () => {
+      player.classList.remove('is-playing');
       if (playIcon) playIcon.textContent = '▶';
       playButton?.setAttribute('aria-label', '播放');
     });
@@ -164,6 +293,10 @@ import { playlist } from '@/data/music';
     seek?.addEventListener('input', () => {
       if (!(audio instanceof HTMLAudioElement) || !(seek instanceof HTMLInputElement) || !audio.duration) return;
       audio.currentTime = (Number(seek.value) / 100) * audio.duration;
+      resetIdleTimer();
     });
+
+    restorePosition();
+    resetIdleTimer();
   }
 </script>
