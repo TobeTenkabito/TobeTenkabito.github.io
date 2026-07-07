@@ -7,6 +7,6 @@ export const playlist = [
   {
     title: '戀の歌',
     artist: '伊藤彩沙',
-    src: 'audio/戀の歌.mp3',
+    src: '/audio/戀の歌.mp3',
   },
 ];

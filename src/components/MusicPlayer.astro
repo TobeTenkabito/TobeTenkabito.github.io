@@ -4,6 +4,16 @@ import { playlist } from '@/data/music';
 
 <div class="floating-music" data-music-player data-collapsed="false">
   <button class="music-bubble" type="button" aria-label="展开音乐播放器" data-toggle data-drag-handle>
+    <span class="beat-ring" aria-hidden="true">
+      <span class="beat-dot beat-dot-1"></span>
+      <span class="beat-dot beat-dot-2"></span>
+      <span class="beat-dot beat-dot-3"></span>
+      <span class="beat-dot beat-dot-4"></span>
+      <span class="beat-dot beat-dot-5"></span>
+      <span class="beat-dot beat-dot-6"></span>
+      <span class="beat-dot beat-dot-7"></span>
+      <span class="beat-dot beat-dot-8"></span>
+    </span>
     <span aria-hidden="true">♪</span>
   </button>
 
@@ -35,27 +45,46 @@ import { playlist } from '@/data/music';
       <span data-duration>0:00</span>
     </div>
 
+    <div class="volume-control">
+      <label for="music-volume">音量</label>
+      <input id="music-volume" data-volume type="range" min="0" max="1" step="0.01" value="0.8" />
+      <span data-volume-value>80%</span>
+    </div>
+
     <audio data-audio preload="metadata" src={playlist[0]?.src}></audio>
 
-    <ol class="track-list">
-      {
-        playlist.map((track, index) => (
-          <li>
-            <button
-              type="button"
-              class={index === 0 ? 'track-button is-active' : 'track-button'}
-              data-track-index={index}
-              data-src={track.src}
-              data-title={track.title}
-              data-artist={track.artist}
-            >
-              <span>{track.title}</span>
-              <small>{track.artist}</small>
-            </button>
-          </li>
-        ))
-      }
-    </ol>
+    <div class="track-drawer" data-playlist-open="false">
+      <button
+        class="playlist-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="music-track-list"
+        data-playlist-toggle
+      >
+        <span>曲目列表</span>
+        <small>{playlist.length} 首</small>
+      </button>
+
+      <ol class="track-list" id="music-track-list" data-track-list hidden>
+        {
+          playlist.map((track, index) => (
+            <li>
+              <button
+                type="button"
+                class={index === 0 ? 'track-button is-active' : 'track-button'}
+                data-track-index={index}
+                data-src={track.src}
+                data-title={track.title}
+                data-artist={track.artist}
+              >
+                <span>{track.title}</span>
+                <small>{track.artist}</small>
+              </button>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
   </section>
 </div>
 
@@ -70,9 +99,14 @@ import { playlist } from '@/data/music';
     const nextButton = player.querySelector<HTMLButtonElement>('[data-next]');
     const toggleButton = player.querySelector<HTMLButtonElement>('[data-toggle]');
     const collapseButton = player.querySelector<HTMLButtonElement>('[data-collapse]');
+    const playlistToggle = player.querySelector<HTMLButtonElement>('[data-playlist-toggle]');
+    const trackList = player.querySelector<HTMLOListElement>('[data-track-list]');
+    const trackDrawer = player.querySelector<HTMLElement>('[data-playlist-open]');
     const title = player.querySelector<HTMLElement>('[data-track-title]');
     const artist = player.querySelector<HTMLElement>('[data-track-artist]');
     const seek = player.querySelector<HTMLInputElement>('[data-seek]');
+    const volume = player.querySelector<HTMLInputElement>('[data-volume]');
+    const volumeValue = player.querySelector<HTMLElement>('[data-volume-value]');
     const currentTime = player.querySelector<HTMLElement>('[data-current-time]');
     const duration = player.querySelector<HTMLElement>('[data-duration]');
     const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
@@ -148,6 +182,15 @@ import { playlist } from '@/data/music';
       return `${minutes}:${rest}`;
     };
 
+    const updateVolume = (value: number) => {
+      if (!(audio instanceof HTMLAudioElement) || !(volume instanceof HTMLInputElement)) return;
+      const nextVolume = Number.isFinite(value) ? clamp(value, 0, 1) : 0.8;
+      audio.volume = nextVolume;
+      volume.value = String(nextVolume);
+      if (volumeValue) volumeValue.textContent = `${Math.round(nextVolume * 100)}%`;
+      localStorage.setItem('music-player-volume', String(nextVolume));
+    };
+
     const setActiveTrack = (index: number, shouldPlay = false) => {
       const track = trackButtons[index];
       if (!track || !(audio instanceof HTMLAudioElement)) return;
@@ -188,6 +231,18 @@ import { playlist } from '@/data/music';
     });
 
     collapseButton?.addEventListener('click', () => setCollapsed(true));
+
+    playlistToggle?.addEventListener('click', () => {
+      const isOpen = trackDrawer?.dataset.playlistOpen === 'true';
+      trackDrawer?.setAttribute('data-playlist-open', String(!isOpen));
+      playlistToggle.setAttribute('aria-expanded', String(!isOpen));
+      if (trackList) trackList.hidden = isOpen;
+      resetIdleTimer();
+      requestAnimationFrame(() => {
+        const rect = player.getBoundingClientRect();
+        placePlayer(rect.left, rect.top);
+      });
+    });
 
     playButton?.addEventListener('click', () => {
       if (!(audio instanceof HTMLAudioElement)) return;
@@ -296,7 +351,13 @@ import { playlist } from '@/data/music';
       resetIdleTimer();
     });
 
+    volume?.addEventListener('input', () => {
+      updateVolume(Number(volume.value));
+      resetIdleTimer();
+    });
+
     restorePosition();
+    updateVolume(Number(localStorage.getItem('music-player-volume') ?? volume?.value ?? 0.8));
     resetIdleTimer();
   }
 </script>
