@@ -111,9 +111,16 @@ import { playlist } from '@/data/music';
     const duration = player.querySelector<HTMLElement>('[data-duration]');
     const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
     const dragHandles = [...player.querySelectorAll<HTMLElement>('[data-drag-handle]')];
+    const beatDots = [...player.querySelectorAll<HTMLElement>('.beat-dot')];
     const idleDelay = 9000;
     let currentIndex = 0;
     let idleTimer = 0;
+    let audioContext: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    let frequencyData: Uint8Array<ArrayBuffer> | null = null;
+    let mediaSource: MediaElementAudioSourceNode | null = null;
+    let beatFrame = 0;
+    let smoothedEnergy = 0;
     let dragState:
       | {
           pointerId: number;
@@ -126,6 +133,83 @@ import { playlist } from '@/data/music';
       | null = null;
 
     const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+    const averageRange = (data: Uint8Array<ArrayBuffer>, start: number, end: number) => {
+      const first = clamp(start, 0, data.length - 1);
+      const last = clamp(end, first + 1, data.length);
+      let total = 0;
+
+      for (let index = first; index < last; index += 1) {
+        total += data[index];
+      }
+
+      return total / ((last - first) * 255);
+    };
+
+    const stopBeatMeter = () => {
+      window.cancelAnimationFrame(beatFrame);
+      beatFrame = 0;
+      smoothedEnergy = 0;
+      for (const dot of beatDots) {
+        dot.style.setProperty('--beat', '0');
+      }
+    };
+
+    const renderBeatMeter = () => {
+      if (!analyser || !frequencyData || !(audio instanceof HTMLAudioElement) || audio.paused) {
+        stopBeatMeter();
+        return;
+      }
+
+      analyser.getByteFrequencyData(frequencyData);
+
+      const bass = averageRange(frequencyData, 1, 8);
+      const lowMid = averageRange(frequencyData, 8, 20);
+      const highMid = averageRange(frequencyData, 20, 48);
+      const energy = bass * 0.68 + lowMid * 0.22 + highMid * 0.1;
+      smoothedEnergy = smoothedEnergy * 0.62 + energy * 0.38;
+
+      beatDots.forEach((dot, index) => {
+        const band = index % 3 === 0 ? bass : index % 3 === 1 ? lowMid : highMid;
+        const accent = index % 2 === 0 ? smoothedEnergy : energy;
+        const beat = clamp(band * 0.72 + accent * 0.5, 0, 1);
+        dot.style.setProperty('--beat', beat.toFixed(3));
+      });
+
+      beatFrame = window.requestAnimationFrame(renderBeatMeter);
+    };
+
+    const setupAudioAnalysis = async () => {
+      if (!(audio instanceof HTMLAudioElement)) return;
+
+      if (!audioContext) {
+        const AudioContextConstructor =
+          window.AudioContext ||
+          (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+        if (!AudioContextConstructor) return;
+
+        audioContext = new AudioContextConstructor();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.68;
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        mediaSource = audioContext.createMediaElementSource(audio);
+        mediaSource.connect(analyser);
+        analyser.connect(audioContext.destination);
+      }
+
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+    };
+
+    const startBeatMeter = async () => {
+      await setupAudioAnalysis();
+      if (!beatFrame) {
+        beatFrame = window.requestAnimationFrame(renderBeatMeter);
+      }
+    };
 
     const placePlayer = (left: number, top: number) => {
       const rect = player.getBoundingClientRect();
@@ -191,6 +275,17 @@ import { playlist } from '@/data/music';
       localStorage.setItem('music-player-volume', String(nextVolume));
     };
 
+    const safePlay = async () => {
+      if (!(audio instanceof HTMLAudioElement)) return;
+      await setupAudioAnalysis();
+
+      try {
+        await audio.play();
+      } catch {
+        player.classList.remove('is-playing');
+      }
+    };
+
     const setActiveTrack = (index: number, shouldPlay = false) => {
       const track = trackButtons[index];
       if (!track || !(audio instanceof HTMLAudioElement)) return;
@@ -209,13 +304,13 @@ import { playlist } from '@/data/music';
       if (duration) duration.textContent = '0:00';
 
       if (shouldPlay) {
-        audio.play();
+        safePlay();
       }
       resetIdleTimer();
     };
 
     const playCurrent = () => {
-      if (audio instanceof HTMLAudioElement) audio.play();
+      safePlay();
       resetIdleTimer();
     };
 
@@ -320,12 +415,14 @@ import { playlist } from '@/data/music';
       player.classList.add('is-playing');
       if (playIcon) playIcon.textContent = '||';
       playButton?.setAttribute('aria-label', '暂停');
+      startBeatMeter();
     });
 
     audio?.addEventListener('pause', () => {
       player.classList.remove('is-playing');
       if (playIcon) playIcon.textContent = '▶';
       playButton?.setAttribute('aria-label', '播放');
+      stopBeatMeter();
     });
 
     audio?.addEventListener('loadedmetadata', () => {

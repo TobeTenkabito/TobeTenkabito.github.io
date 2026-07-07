@@ -285,6 +285,8 @@ main {
 }
 
 .beat-dot {
+  --angle: 0deg;
+  --beat: 0;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -293,71 +295,44 @@ main {
   margin: -0.17rem;
   border-radius: 999px;
   background: rgba(47, 111, 103, 0.28);
-  opacity: 0.62;
+  opacity: calc(0.34 + var(--beat) * 0.58);
+  transform: rotate(var(--angle)) translate(calc(2.08rem + var(--beat) * 0.36rem))
+    scale(calc(0.76 + var(--beat) * 1.15));
+  transition:
+    opacity 80ms linear,
+    transform 80ms linear;
 }
 
 .beat-dot-1 {
-  transform: rotate(0deg) translate(2.22rem);
+  --angle: 0deg;
 }
 
 .beat-dot-2 {
-  transform: rotate(45deg) translate(2.22rem);
+  --angle: 45deg;
 }
 
 .beat-dot-3 {
-  transform: rotate(90deg) translate(2.22rem);
+  --angle: 90deg;
 }
 
 .beat-dot-4 {
-  transform: rotate(135deg) translate(2.22rem);
+  --angle: 135deg;
 }
 
 .beat-dot-5 {
-  transform: rotate(180deg) translate(2.22rem);
+  --angle: 180deg;
 }
 
 .beat-dot-6 {
-  transform: rotate(225deg) translate(2.22rem);
+  --angle: 225deg;
 }
 
 .beat-dot-7 {
-  transform: rotate(270deg) translate(2.22rem);
+  --angle: 270deg;
 }
 
 .beat-dot-8 {
-  transform: rotate(315deg) translate(2.22rem);
-}
-
-.floating-music.is-playing[data-collapsed="true"] .beat-dot {
-  animation: beatPulse 960ms infinite ease-in-out;
-}
-
-.floating-music.is-playing[data-collapsed="true"] .beat-dot-2,
-.floating-music.is-playing[data-collapsed="true"] .beat-dot-6 {
-  animation-delay: 120ms;
-}
-
-.floating-music.is-playing[data-collapsed="true"] .beat-dot-3,
-.floating-music.is-playing[data-collapsed="true"] .beat-dot-7 {
-  animation-delay: 240ms;
-}
-
-.floating-music.is-playing[data-collapsed="true"] .beat-dot-4,
-.floating-music.is-playing[data-collapsed="true"] .beat-dot-8 {
-  animation-delay: 360ms;
-}
-
-@keyframes beatPulse {
-  0%,
-  100% {
-    opacity: 0.42;
-    scale: 0.82;
-  }
-
-  42% {
-    opacity: 0.95;
-    scale: 1.45;
-  }
+  --angle: 315deg;
 }
 
 .floating-music[data-collapsed="true"] {
