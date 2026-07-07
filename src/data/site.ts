@@ -1,7 +1,7 @@
 export const site = {
   name: 'TobeTenkabito',
   title: 'TobeTenkabito 的个人博客',
-  description: '记录技术学习、项目复盘和生活思考的个人博客。',
+  description: '写技术、项目和一些慢慢想明白的事情。',
   url: 'https://TobeTenkabito.github.io',
   author: 'TobeTenkabito',
   nav: [
