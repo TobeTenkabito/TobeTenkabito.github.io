@@ -109,12 +109,12 @@ import { playlist } from '@/data/music';
     const idleDelay = 9000;
     const wavePointCount = 64;
     const waveBaseRadius = 38;
-    const waveSpikePattern = [0.12, 0.36, 0.08, 0.62, 0.14, 0.28, 0.06, 0.44];
     let currentIndex = 0;
     let idleTimer = 0;
     let audioContext: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let frequencyData: Uint8Array<ArrayBuffer> | null = null;
+    let timeData: Uint8Array<ArrayBuffer> | null = null;
     let mediaSource: MediaElementAudioSourceNode | null = null;
     let beatFrame = 0;
     let smoothedEnergy = 0;
@@ -143,18 +143,53 @@ import { playlist } from '@/data/music';
       return total / ((last - first) * 255);
     };
 
-    const circularWavePoints = (data?: Uint8Array<ArrayBuffer>, activeEnergy = 0) => {
+    const timeStats = (data: Uint8Array<ArrayBuffer>) => {
+      let squareTotal = 0;
+      let peak = 0;
+
+      for (const value of data) {
+        const centered = (value - 128) / 128;
+        squareTotal += centered * centered;
+        peak = Math.max(peak, Math.abs(centered));
+      }
+
+      return {
+        peak,
+        rms: Math.sqrt(squareTotal / data.length),
+      };
+    };
+
+    const spectralCentroid = (data: Uint8Array<ArrayBuffer>) => {
+      let weightedTotal = 0;
+      let magnitudeTotal = 0;
+
+      for (let index = 1; index < data.length; index += 1) {
+        const magnitude = data[index] / 255;
+        weightedTotal += index * magnitude;
+        magnitudeTotal += magnitude;
+      }
+
+      return magnitudeTotal > 0 ? weightedTotal / magnitudeTotal / data.length : 0;
+    };
+
+    const circularWavePoints = (
+      data?: Uint8Array<ArrayBuffer>,
+      loudness = 0,
+      peak = 0,
+      brightness = 0,
+    ) => {
       const points: string[] = [];
 
       for (let index = 0; index <= wavePointCount; index += 1) {
         const normalized = index / wavePointCount;
         const angle = normalized * Math.PI * 2 - Math.PI / 2;
         const foldedIndex = index % wavePointCount;
-        const bandStart = 2 + Math.floor((foldedIndex / wavePointCount) * 62);
-        const band = data ? averageRange(data, bandStart, bandStart + 4) : 0;
-        const spike = waveSpikePattern[foldedIndex % waveSpikePattern.length];
-        const pulse = activeEnergy > 0.018 ? smoothedEnergy * 0.34 + band * 0.72 : 0;
-        const radius = waveBaseRadius + pulse * (2.6 + spike * 9.5);
+        const binPosition = (foldedIndex * 0.61803398875 + brightness * 0.31) % 1;
+        const bandStart = 2 + Math.floor(binPosition * 78);
+        const band = data ? averageRange(data, bandStart, bandStart + 5) : 0;
+        const angleTexture = data ? averageRange(data, 2 + ((foldedIndex * 7) % 78), 7 + ((foldedIndex * 7) % 78)) : 0;
+        const physicalEnergy = smoothedEnergy * 0.28 + loudness * 0.42 + peak * 0.18 + band * 0.62 + angleTexture * 0.24;
+        const radius = waveBaseRadius + (loudness > 0.012 ? clamp(physicalEnergy, 0, 1) * 18 : 0);
         const x = 50 + Math.cos(angle) * radius;
         const y = 50 + Math.sin(angle) * radius;
 
@@ -172,21 +207,25 @@ import { playlist } from '@/data/music';
     };
 
     const renderBeatMeter = () => {
-      if (!analyser || !frequencyData || !(audio instanceof HTMLAudioElement) || audio.paused) {
+      if (!analyser || !frequencyData || !timeData || !(audio instanceof HTMLAudioElement) || audio.paused) {
         stopBeatMeter();
         return;
       }
 
       const data = frequencyData;
+      const waveData = timeData;
       analyser.getByteFrequencyData(data);
+      analyser.getByteTimeDomainData(waveData);
 
       const bass = averageRange(data, 1, 8);
       const lowMid = averageRange(data, 8, 20);
       const highMid = averageRange(data, 20, 48);
-      const energy = bass * 0.68 + lowMid * 0.22 + highMid * 0.1;
+      const { peak, rms } = timeStats(waveData);
+      const brightness = spectralCentroid(data);
+      const energy = rms * 0.5 + peak * 0.18 + bass * 0.2 + lowMid * 0.08 + highMid * 0.04;
       smoothedEnergy = smoothedEnergy * 0.62 + energy * 0.38;
 
-      beatWave?.setAttribute('points', circularWavePoints(data, energy));
+      beatWave?.setAttribute('points', circularWavePoints(data, rms, peak, brightness));
       beatFrame = window.requestAnimationFrame(renderBeatMeter);
     };
 
@@ -205,6 +244,7 @@ import { playlist } from '@/data/music';
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.68;
         frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        timeData = new Uint8Array(analyser.frequencyBinCount);
         mediaSource = audioContext.createMediaElementSource(audio);
         mediaSource.connect(analyser);
         analyser.connect(audioContext.destination);
