@@ -24,6 +24,18 @@ import { site } from '@/data/site';
 
   <section class="section contact-band">
     <h2>保持连接</h2>
-    <p>你可以把这里当作我的公开工作台。之后可以在这个页面补上邮箱、GitHub、社交账号或项目链接。</p>
+    <p>你可以把这里当作我的公开工作台。代码、项目和公开记录，会先从这些地方慢慢汇合过来。</p>
+    <ul class="external-link-list">
+      {
+        site.externalLinks.map((link) => (
+          <li>
+            <a href={link.href} target="_blank" rel="noreferrer">
+              <span>{link.label}</span>
+              <small>{link.description}</small>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </section>
 </BaseLayout>

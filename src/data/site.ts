@@ -11,4 +11,11 @@ export const site = {
     { href: '/search/', label: '搜索' },
     { href: '/about/', label: '关于' },
   ],
+  externalLinks: [
+    {
+      href: 'https://github.com/TobeTenkabito',
+      label: 'GitHub',
+      description: '代码、项目和公开记录。',
+    },
+  ],
 };

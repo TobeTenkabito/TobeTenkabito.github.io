@@ -53,6 +53,15 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
     </main>
     <footer class="site-footer">
       <p>© {new Date().getFullYear()} {site.author}. Build by Astro.</p>
+      <nav class="footer-links" aria-label="第三方链接">
+        {
+          site.externalLinks.map((link) => (
+            <a href={link.href} target="_blank" rel="noreferrer">
+              {link.label}
+            </a>
+          ))
+        }
+      </nav>
     </footer>
     <MusicPlayer />
   </body>
