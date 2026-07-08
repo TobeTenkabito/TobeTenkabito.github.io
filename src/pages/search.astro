@@ -1,0 +1,306 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { categoryHref, postHref, sortPosts } from '@/lib/posts';
+
+const posts = sortPosts((await getCollection('blog')).filter((post) => !post.data.draft));
+const searchIndex = posts.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  category: post.data.category,
+  categoryUrl: categoryHref(post.data.category),
+  tags: post.data.tags,
+  url: postHref(post),
+  date: post.data.publishDate.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }),
+  timestamp: post.data.publishDate.getTime(),
+  body: (post.body ?? '').replace(/\s+/g, ' ').trim(),
+}));
+const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
+---
+
+<BaseLayout title="搜索" description="检索 TobeTenkabito 的文章、分类和标签。">
+  <section class="page-heading search-heading">
+    <p class="eyebrow">Search</p>
+    <h1>搜索</h1>
+    <p>文章多起来以后，检索会比翻页更诚实一点。</p>
+  </section>
+
+  <section class="search-panel" data-search>
+    <label class="search-label" for="site-search">关键词</label>
+    <div class="search-box">
+      <input
+        id="site-search"
+        type="search"
+        autocomplete="off"
+        placeholder="标题、分类、标签或正文片段"
+        data-search-input
+      />
+      <button class="search-clear" type="button" data-search-clear>清空</button>
+    </div>
+    <p class="search-status" data-search-status></p>
+  </section>
+
+  <section class="post-list search-results" aria-live="polite" data-search-results></section>
+
+  <script id="search-index" type="application/json" set:html={searchIndexJson} is:inline />
+
+  <script>
+    type SearchItem = {
+      title: string;
+      description: string;
+      category: string;
+      categoryUrl: string;
+      tags: string[];
+      url: string;
+      date: string;
+      timestamp: number;
+      body: string;
+    };
+
+    type SearchResult = SearchItem & {
+      matchKind: '完整匹配' | '字符匹配';
+      score: number;
+    };
+
+    const normalizeSearchText = (value: string) =>
+      value
+        .toLocaleLowerCase('zh-CN')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const scoreFullMatch = (item: SearchItem, query: string) => {
+      const fields = [
+        { value: item.title, weight: 1000 },
+        { value: item.description, weight: 650 },
+        { value: item.category, weight: 520 },
+        { value: item.tags.join(' '), weight: 480 },
+        { value: item.body, weight: 220 },
+      ];
+
+      let score = 0;
+
+      for (const field of fields) {
+        const text = normalizeSearchText(field.value);
+
+        if (text === query) {
+          score += field.weight + 300;
+        } else if (text.includes(query)) {
+          score += field.weight;
+        }
+      }
+
+      return score;
+    };
+
+    const scoreCharacterMatch = (item: SearchItem, query: string) => {
+      const text = normalizeSearchText(
+        `${item.title} ${item.description} ${item.category} ${item.tags.join(' ')} ${item.body}`,
+      );
+      const chars = Array.from(query.replace(/\s/g, ''));
+      const uniqueChars = [...new Set(chars)];
+
+      if (!uniqueChars.length) {
+        return 0;
+      }
+
+      const matchedChars = uniqueChars.filter((char) => text.includes(char)).length;
+      const requiredRatio = uniqueChars.length <= 2 ? 1 : 0.6;
+      const matchedRatio = matchedChars / uniqueChars.length;
+
+      if (matchedRatio < requiredRatio) {
+        return 0;
+      }
+
+      let orderedMatches = 0;
+      let cursor = -1;
+
+      for (const char of chars) {
+        const nextIndex = text.indexOf(char, cursor + 1);
+
+        if (nextIndex === -1) {
+          continue;
+        }
+
+        orderedMatches += 1;
+        cursor = nextIndex;
+      }
+
+      return Math.round(matchedRatio * 120 + (orderedMatches / chars.length) * 80);
+    };
+
+    const searchPosts = (items: SearchItem[], rawQuery: string) => {
+      const query = normalizeSearchText(rawQuery);
+
+      if (!query) {
+        return items
+          .map((item) => ({ ...item, matchKind: '完整匹配' as const, score: 0 }))
+          .sort((a, b) => b.timestamp - a.timestamp);
+      }
+
+      const fullMatches: SearchResult[] = [];
+      const characterMatches: SearchResult[] = [];
+
+      for (const item of items) {
+        const fullScore = scoreFullMatch(item, query);
+
+        if (fullScore > 0) {
+          fullMatches.push({ ...item, matchKind: '完整匹配', score: fullScore });
+          continue;
+        }
+
+        const characterScore = scoreCharacterMatch(item, query);
+
+        if (characterScore > 0) {
+          characterMatches.push({ ...item, matchKind: '字符匹配', score: characterScore });
+        }
+      }
+
+      const byScoreThenDate = (a: SearchResult, b: SearchResult) =>
+        b.score - a.score || b.timestamp - a.timestamp;
+
+      return [...fullMatches.sort(byScoreThenDate), ...characterMatches.sort(byScoreThenDate)];
+    };
+
+    const excerptFrom = (item: SearchItem, query: string) => {
+      const fallback = item.description;
+      const body = item.body || fallback;
+      const normalizedBody = normalizeSearchText(body);
+      const normalizedQuery = normalizeSearchText(query);
+
+      if (!normalizedQuery) {
+        return fallback;
+      }
+
+      const index = normalizedBody.indexOf(normalizedQuery);
+
+      if (index === -1) {
+        return fallback;
+      }
+
+      const start = Math.max(0, index - 36);
+      const end = Math.min(body.length, index + normalizedQuery.length + 72);
+      const prefix = start > 0 ? '...' : '';
+      const suffix = end < body.length ? '...' : '';
+
+      return `${prefix}${body.slice(start, end)}${suffix}`;
+    };
+
+    const initSearchPage = () => {
+      const root = document.querySelector<HTMLElement>('[data-search]');
+
+      if (!root || root.dataset.ready === 'true') {
+        return;
+      }
+
+      root.dataset.ready = 'true';
+
+      const input = root.querySelector<HTMLInputElement>('[data-search-input]');
+      const clearButton = root.querySelector<HTMLButtonElement>('[data-search-clear]');
+      const status = root.querySelector<HTMLElement>('[data-search-status]');
+      const results = document.querySelector<HTMLElement>('[data-search-results]');
+      const indexElement = document.querySelector<HTMLScriptElement>('#search-index');
+
+      if (!input || !clearButton || !status || !results || !indexElement?.textContent) {
+        return;
+      }
+
+      const items = JSON.parse(indexElement.textContent) as SearchItem[];
+
+      const renderResults = (rawQuery: string) => {
+        const query = rawQuery.trim();
+        const matches = searchPosts(items, query);
+
+        results.replaceChildren();
+        clearButton.hidden = !query;
+
+        if (query) {
+          status.textContent = matches.length ? `找到 ${matches.length} 篇相关文章。` : '没有找到匹配的文章。';
+          const url = new URL(window.location.href);
+          url.searchParams.set('q', query);
+          window.history.replaceState({}, '', url);
+        } else {
+          status.textContent = `目前收录 ${items.length} 篇文章。`;
+          const url = new URL(window.location.href);
+          url.searchParams.delete('q');
+          window.history.replaceState({}, '', url);
+        }
+
+        if (!matches.length) {
+          const empty = document.createElement('p');
+          empty.className = 'search-empty';
+          empty.textContent = '换一个更具体或更短的词试试。';
+          results.append(empty);
+          return;
+        }
+
+        for (const item of matches) {
+          const article = document.createElement('article');
+          article.className = 'post-row search-result';
+
+          const content = document.createElement('div');
+          const meta = document.createElement('p');
+          meta.className = 'post-date';
+          meta.textContent = `${item.date} / `;
+
+          const category = document.createElement('a');
+          category.href = item.categoryUrl;
+          category.textContent = item.category;
+          meta.append(category);
+
+          const heading = document.createElement('h2');
+          const link = document.createElement('a');
+          link.href = item.url;
+          link.textContent = item.title;
+          heading.append(link);
+
+          const description = document.createElement('p');
+          description.textContent = excerptFrom(item, query);
+
+          content.append(meta, heading, description);
+
+          const aside = document.createElement('div');
+          aside.className = 'search-result-side';
+
+          const badge = document.createElement('span');
+          badge.className = 'search-match-badge';
+          badge.textContent = query ? item.matchKind : '最新文章';
+          aside.append(badge);
+
+          if (item.tags.length) {
+            const tagList = document.createElement('ul');
+            tagList.className = 'tag-list';
+
+            for (const tag of item.tags) {
+              const tagItem = document.createElement('li');
+              tagItem.textContent = tag;
+              tagList.append(tagItem);
+            }
+
+            aside.append(tagList);
+          }
+
+          article.append(content, aside);
+          results.append(article);
+        }
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      input.value = params.get('q') ?? '';
+      renderResults(input.value);
+
+      input.addEventListener('input', () => renderResults(input.value));
+      clearButton.addEventListener('click', () => {
+        input.value = '';
+        input.focus();
+        renderResults('');
+      });
+    };
+
+    document.addEventListener('astro:page-load', initSearchPage);
+    initSearchPage();
+  </script>
+</BaseLayout>

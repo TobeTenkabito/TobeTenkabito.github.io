@@ -681,6 +681,96 @@ main {
   padding-bottom: clamp(3rem, 8vw, 5.5rem);
 }
 
+.search-heading {
+  padding-bottom: clamp(1.8rem, 4vw, 3rem);
+}
+
+.search-panel {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 1.2rem 0;
+}
+
+.search-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--note);
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.search-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.search-box input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+}
+
+.search-box input:focus {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-soft);
+}
+
+.search-clear {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.55rem 0.8rem;
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.search-clear:hover,
+.search-clear:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.search-clear[hidden] {
+  display: none;
+}
+
+.search-status,
+.search-empty {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+}
+
+.search-results {
+  margin-top: 1.6rem;
+}
+
+.search-result-side {
+  display: grid;
+  justify-items: end;
+  gap: 0.75rem;
+}
+
+.search-match-badge {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.16rem 0.52rem;
+  background: var(--paper);
+  color: var(--note);
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .category-row h2 {
   font-family: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
   font-size: 1.7rem;
@@ -748,6 +838,10 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .search-result-side {
+    justify-items: start;
+  }
+
   .hero {
     padding-top: 3rem;
   }
@@ -778,6 +872,14 @@ main {
 
   .hero-actions,
   .button {
+    width: 100%;
+  }
+
+  .search-box {
+    grid-template-columns: 1fr;
+  }
+
+  .search-clear {
     width: 100%;
   }
 }
