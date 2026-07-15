@@ -37,5 +37,32 @@ const formattedDate = post.data.publishDate.toLocaleDateString('zh-CN', {
     <div class="prose">
       <slot />
     </div>
+    {
+      post.data.references.length > 0 && (
+        <section class="post-references" aria-labelledby="references-title">
+          <p class="eyebrow">References</p>
+          <h2 id="references-title">参考文献</h2>
+          <ol>
+            {post.data.references.map((reference) => (
+              <li>
+                <a href={reference.url} target="_blank" rel="noreferrer">
+                  {reference.title}
+                </a>
+                {
+                  reference.publisher && (
+                    <span class="reference-meta">{reference.publisher}</span>
+                  )
+                }
+                {
+                  reference.accessed && (
+                    <span class="reference-meta">访问于 {reference.accessed}</span>
+                  )
+                }
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
   </article>
 </BaseLayout>

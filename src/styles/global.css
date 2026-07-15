@@ -812,6 +812,47 @@ main {
   text-underline-offset: 0.18em;
 }
 
+.post-references {
+  border-top: 1px solid var(--line);
+  margin-top: clamp(2.8rem, 7vw, 4.8rem);
+  padding-top: 1.4rem;
+}
+
+.post-references h2 {
+  margin: 0.25rem 0 1.1rem;
+  font-family: Georgia, "Times New Roman", "Songti SC", SimSun, serif;
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+
+.post-references ol {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.post-references li {
+  padding-left: 0.35rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.post-references a {
+  color: var(--text);
+  font-weight: 750;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.18em;
+}
+
+.reference-meta {
+  display: inline-block;
+  margin-left: 0.6rem;
+  color: var(--note);
+  font-size: 0.9rem;
+}
+
 .contact-band {
   border-top: 1px solid var(--line);
   padding-top: clamp(2rem, 5vw, 3.2rem);

@@ -10,6 +10,16 @@ const blog = defineCollection({
     publishDate: z.date(),
     category: z.string().default('随笔'),
     tags: z.array(z.string()).default([]),
+    references: z
+      .array(
+        z.object({
+          title: z.string(),
+          url: z.url(),
+          publisher: z.string().optional(),
+          accessed: z.string().optional(),
+        }),
+      )
+      .default([]),
     draft: z.boolean().default(false),
   }),
 });

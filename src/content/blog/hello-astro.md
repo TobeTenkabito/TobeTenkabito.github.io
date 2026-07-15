@@ -4,6 +4,11 @@ description: '记录这个博客从零搭建的第一步，以及为什么选择
 publishDate: 2026-07-07
 category: '建站日志'
 tags: ['Astro', 'Blog', 'GitHub Pages']
+references:
+  - title: 'Astro 官方文档：安装和设置'
+    url: 'https://docs.astro.build/zh-cn/install-and-setup/'
+    publisher: 'Astro Documentation'
+    accessed: '2026-07-15'
 ---
 
 今天把博客迁移到 Astro。它适合内容驱动的网站：页面默认生成静态 HTML，写文章继续使用 Markdown，项目结构也足够轻。
