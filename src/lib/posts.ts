@@ -1,6 +1,7 @@
 import type { CollectionEntry } from 'astro:content';
 
 export type BlogPost = CollectionEntry<'blog'>;
+export type BlogVersion = CollectionEntry<'blogVersions'>;
 
 export function postSlug(post: CollectionEntry<'blog'>) {
   return post.id.replace(/\.md$/, '');
@@ -8,6 +9,20 @@ export function postSlug(post: CollectionEntry<'blog'>) {
 
 export function postHref(post: CollectionEntry<'blog'>) {
   return `/blog/${postSlug(post)}/`;
+}
+
+export function versionSlug(version: BlogVersion) {
+  return version.id.replace(/\.md$/, '').split('/').pop() ?? version.id;
+}
+
+export function versionHref(post: BlogPost, version: BlogVersion) {
+  return `/blog/${postSlug(post)}/history/${versionSlug(version)}/`;
+}
+
+export function sortVersions(versions: BlogVersion[]) {
+  return [...versions].sort(
+    (a, b) => b.data.versionDate.getTime() - a.data.versionDate.getTime(),
+  );
 }
 
 export function sortPosts(posts: BlogPost[]) {

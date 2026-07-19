@@ -1,31 +1,46 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import type { CollectionEntry } from 'astro:content';
-import { categoryHref } from '@/lib/posts';
+import { categoryHref, postHref, sortVersions, versionHref } from '@/lib/posts';
 
 interface Props {
   post: CollectionEntry<'blog'>;
+  versions?: CollectionEntry<'blogVersions'>[];
+  version?: CollectionEntry<'blogVersions'>;
 }
 
-const { post } = Astro.props;
-const formattedDate = post.data.publishDate.toLocaleDateString('zh-CN', {
+const { post, versions = [], version } = Astro.props;
+const activeReferences = version ? version.data.references : post.data.references;
+const formattedDate = (version?.data.versionDate ?? post.data.publishDate).toLocaleDateString('zh-CN', {
   year: 'numeric',
   month: 'long',
   day: 'numeric',
 });
+const pageTitle = version ? `${post.data.title} · ${version.data.label}` : post.data.title;
+const sortedVersions = sortVersions(versions);
 ---
 
-<BaseLayout title={post.data.title} description={post.data.description}>
+<BaseLayout title={pageTitle} description={post.data.description}>
   <article class="post-page">
-    <a class="text-link" href="/blog/">← 返回文章列表</a>
+    <a class="text-link" href={version ? postHref(post) : '/blog/'}>
+      {version ? '← 返回当前文章' : '← 返回文章列表'}
+    </a>
     <header class="post-hero">
       <p class="eyebrow">
         {formattedDate}
         <span> / </span>
         <a href={categoryHref(post.data.category)}>{post.data.category}</a>
+        {
+          version && <span class="post-version-badge">{version.data.label}</span>
+        }
       </p>
       <h1>{post.data.title}</h1>
       <p>{post.data.description}</p>
+      {
+        version?.data.changeNote && (
+          <p class="post-version-note">{version.data.changeNote}</p>
+        )
+      }
       {
         post.data.tags.length > 0 && (
           <ul class="tag-list" aria-label="文章标签">
@@ -38,12 +53,12 @@ const formattedDate = post.data.publishDate.toLocaleDateString('zh-CN', {
       <slot />
     </div>
     {
-      post.data.references.length > 0 && (
+      activeReferences.length > 0 && (
         <section class="post-references" aria-labelledby="references-title">
           <p class="eyebrow">References</p>
           <h2 id="references-title">参考文献</h2>
           <ol>
-            {post.data.references.map((reference) => (
+            {activeReferences.map((reference) => (
               <li>
                 <a href={reference.url} target="_blank" rel="noreferrer">
                   {reference.title}
@@ -58,6 +73,31 @@ const formattedDate = post.data.publishDate.toLocaleDateString('zh-CN', {
                     <span class="reference-meta">访问于 {reference.accessed}</span>
                   )
                 }
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
+    {
+      sortedVersions.length > 0 && (
+        <section class="post-history" aria-labelledby="history-title">
+          <p class="eyebrow">History</p>
+          <h2 id="history-title">历史版本</h2>
+          <ol>
+            {sortedVersions.map((item) => (
+              <li>
+                <a
+                  class:list={{ 'is-current': version?.id === item.id }}
+                  href={versionHref(post, item)}
+                  aria-current={version?.id === item.id ? 'page' : undefined}
+                >
+                  {item.data.label}
+                </a>
+                <time datetime={item.data.versionDate.toISOString()}>
+                  {item.data.versionDate.toLocaleDateString('zh-CN')}
+                </time>
+                {item.data.changeNote && <span>{item.data.changeNote}</span>}
               </li>
             ))}
           </ol>

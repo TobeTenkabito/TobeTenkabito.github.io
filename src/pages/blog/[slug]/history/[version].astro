@@ -1,0 +1,41 @@
+---
+import { getCollection, render } from 'astro:content';
+import BlogPostLayout from '@/layouts/BlogPostLayout.astro';
+import { postSlug, sortVersions, versionSlug } from '@/lib/posts';
+
+export async function getStaticPaths() {
+  const [posts, versions] = await Promise.all([
+    getCollection('blog'),
+    getCollection('blogVersions'),
+  ]);
+  const visiblePosts = posts.filter((post) => !post.data.draft);
+
+  return versions
+    .filter((version) => !version.data.draft)
+    .flatMap((version) => {
+      const post = visiblePosts.find((item) => postSlug(item) === version.data.post);
+
+      if (!post) {
+        return [];
+      }
+
+      const postVersions = sortVersions(
+        versions.filter(
+          (item) => !item.data.draft && item.data.post === postSlug(post),
+        ),
+      );
+
+      return {
+        params: { slug: postSlug(post), version: versionSlug(version) },
+        props: { post, version, versions: postVersions },
+      };
+    });
+}
+
+const { post, version, versions } = Astro.props;
+const { Content } = await render(version);
+---
+
+<BlogPostLayout post={post} version={version} versions={versions}>
+  <Content />
+</BlogPostLayout>
